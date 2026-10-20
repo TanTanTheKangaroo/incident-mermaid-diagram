@@ -1,0 +1,19 @@
+
+```mermaid
+flowchart TD
+  WEB["MyAvailCoreWeb<br/>Auto Archive settings, Basic Info exempt controls, incident list"]
+  API["MyAvailCore API<br/>retention settings, preview, exempt filter"]
+  TA[("Transit Authority<br/>database<br/>Incident, Faretool_System_Params")]
+  PROC["avl.sp_Avail_Archive_Delete_Incidents<br/>archive procedure"]
+  ETL["DW nightly load<br/>spAuthorityLoad runs spFactArchivedIncidentLoad"]
+  DW[("Data Warehouse<br/>FactArchivedIncident")]
+
+  WEB -->|"save both rules in one call<br/>after a Warning that shows the dry-run count"| API
+  WEB -->|"exempt checkbox and reason<br/>Exempt from Archival filter"| API
+  API -->|"writes Archive_DaysToKeep_Incident_* values<br/>and the exemption fields"| TA
+  API -->|"preview: dry run with the proposed days"| PROC
+  PROC -.->|"returns the eligible count"| API
+  PROC -->|"deletes closed and unmodified incidents past retention<br/>never exempt ones"| TA
+  TA -->|"changes read each night<br/>look-back = larger of the two delete settings"| ETL
+  ETL -->|"MERGE, trip keys are Trip_Record_Id<br/>flags incidents deleted from TA"| DW
+```
